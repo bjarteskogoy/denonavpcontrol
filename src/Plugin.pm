@@ -34,7 +34,7 @@
 #	2012/01/30 v1.9 - QuickSelect Issues, removed dead code, strings.txt update
 #	2012/01/30 v1.9.1 - Supports multiple plugin instances, better comms handling, reference levels
 #   2019/08/21 v1.9.2 - Moved to LMS, new zone 4 support
-#	2020/05/14 v2.0 - Added quick selection delay for use during startup.
+#	2020/05/14 v2.0 - Added quick selection delay for use during startup.  
 #   2021/02/24 v2.1 - Retracted.
 #   2021/02/24 v2.2 - Bug fixes.
 #   2021/02/25 v2.3 - Install fix.
@@ -75,7 +75,7 @@ use Plugins::DenonAvpControl::Settings;
 # ----------------------------------------------------------------------------
 # Global variables
 # ----------------------------------------------------------------------------
-my $pluginReady=0; 	# determines if the plugin initialization is complete
+my $pluginReady=0; # determines if the plugin initialization is complete
 my $surroundMode=-1;# Denon Surround Mode Index
 my $roomEq =-1;		# Denon Room Equilizer Index
 my $dynamicEq =-1;	# Denon Dynamic Equilizer Index
@@ -157,7 +157,7 @@ sub newPlayerCheck {
 
 		# Do nothing if client is not a Receiver or Squeezebox
 		if( !(($client->isa( "Slim::Player::Receiver")) || ($client->isa( "Slim::Player::Squeezebox2")))) {
-			$log->debug( "*** DenonAvpControl: Not a receiver or a squeezebox b \n");
+			$log->debug("*** DenonAvpControl: Not a receiver or a squeezebox b \n");
 			#now clear callback for those clients that are not part of the plugin
 			clearCallback();
 			return;
@@ -167,28 +167,30 @@ sub newPlayerCheck {
 		my $cprefs = $prefs->client($client);
 		my $avpIPAddress = "HTTP://" . $cprefs->get('avpAddress') . ":23";
 		my $quickSelect = $cprefs->get('quickSelect');
+		my $inputSelect = $cprefs->get('inputSelect');
 		my $gZone = $cprefs->get('zone');
 		my $pluginEnabled = $cprefs->get('pref_Enabled');
 		my $audioEnabled = $cprefs->get('pref_AudioMenu');
 
 		# Do nothing if plugin is disabled for this client
-		if ( !defined( $pluginEnabled) || $pluginEnabled == 0) {
-			$log->debug( "*** DenonAvpControl: Plugin Not Enabled for: ".$client->name()."\n");
+		if (!defined($pluginEnabled) || $pluginEnabled == 0) {
+			$log->debug("*** DenonAvpControl: Plugin Not Enabled for: " . $client->name() . "\n");
 			#now clear callback for those clients that are not part of the plugin
 			clearCallback();
 			return;
 		} else {
-			$log->debug( "*** DenonAvpControl: Plugin Enabled: \n");
-			$log->debug( "*** DenonAvpControl: Quick Select: " . $quickSelect . "\n");
-			$log->debug( "*** DenonAvpControl: zone: " . $gZone . "\n");
-			$log->debug( "*** DenonAvpControl: IP Address: " . $avpIPAddress . "\n");
+			$log->debug("*** DenonAvpControl: Plugin Enabled: \n");
+			$log->debug("*** DenonAvpControl: Quick Select: " . $quickSelect . "\n");
+			$log->debug("*** DenonAvpControl: Input Select: " . $inputSelect . "\n");
+			$log->debug("*** DenonAvpControl: zone: " . $gZone . "\n");
+			$log->debug("*** DenonAvpControl: IP Address: " . $avpIPAddress . "\n");
 
 			# Install callback to get client state changes
-			Slim::Control::Request::subscribe( \&commandCallback, [['power', 'play', 'playlist', 'pause', 'client', 'mixer' ]], $client);			
-			
+			Slim::Control::Request::subscribe(\&commandCallback, [ [ 'power', 'play', 'playlist', 'pause', 'client', 'mixer' ] ], $client);
+
 			#player menu
-			if ($audioEnabled == 1 && $gZone==0) {
-				$log->debug("Calling the plugin menu register". "\n");
+			if ($audioEnabled == 1 && $gZone == 0) {
+				$log->debug("Calling the plugin menu register" . "\n");
 				# Create SP menu under audio settings	
 				my $icon = 'plugins/DenonAvpControl/html/images/audysseysettings.png';
 				my @menu = ({
@@ -767,7 +769,7 @@ sub commandCallback {
 			# kill any volume changes that may be going on within the timer
 			Slim::Utils::Timers::killTimers( $client, \&handleVolChanges);
 			# delay the volume changes by .125 second to give the AVP time to catch up
-			Slim::Utils::Timers::setTimer( $client, (Time::HiRes::time() + .125), \&handleVolChanges, $DenonVol);			
+			Slim::Utils::Timers::setTimer( $client, (Time::HiRes::time() + .125), \&handleVolChanges, $DenonVol);		
 		}
 	}
 }
@@ -804,17 +806,23 @@ sub handlePowerOn2 {
 	my $cprefs = $prefs->client($client);
 	my $avpIPAddress = "HTTP://" . $cprefs->get('avpAddress') . ":23";
 	my $quickSelect = $cprefs->get('quickSelect');
+	my $inputSelect = $cprefs->get('inputSelect');
 	my $gZone = $cprefs->get('zone');
 	my $gQuickDelay = $cprefs->get('delayQuick');	# Delay to set Quick setting (in seconds)
 
 	$log->debug("*** DenonAvpControl: handling Power ON 2\n");
-	if ( $quickSelect != 0 && $gZone == 0) {
+	if ($quickSelect != 0 && $gZone == 0) {
 		# only if quick select is turned on for master only
-#		&handleQuickSelect($client);
-		Slim::Utils::Timers::setTimer( $client, (Time::HiRes::time() + $gQuickDelay), \&handleQuickSelect); 
-	} else {
+		#		&handleQuickSelect($client);
+		Slim::Utils::Timers::setTimer($client, (Time::HiRes::time() + $gQuickDelay), \&handleQuickSelect);
+	}
+	elsif (length($inputSelect) > 0 && $gZone == 0) {
+		# only if SI select is turned on for master only
+		Slim::Utils::Timers::setTimer($client, (Time::HiRes::time() + $gQuickDelay), \&handleInputSelect);
+	}
+	else {
 		# no quick select so synch volumes
-		Slim::Utils::Timers::setTimer( $client, (Time::HiRes::time() + 1), \&handleVolumeRequest); 
+		Slim::Utils::Timers::setTimer($client, (Time::HiRes::time() + 1), \&handleVolumeRequest);
 	}
 }
 
@@ -864,13 +872,25 @@ sub handleQuickSelect {
 }
 
 # ----------------------------------------------------------------------------
-sub updateSqueezeVol { #used to sync SB vol with AVP
+sub handleInputSelect {
+	my $client = shift;
+	my $cprefs = $prefs->client($client);
+	my $avpIPAddress = "HTTP://" . $cprefs->get('avpAddress') . ":23";
+	my $inputSelect = $cprefs->get('inputSelect');
+
+	$log->debug("*** DenonAvpControl: handling input select \n");
+	Plugins::DenonAvpControl::DenonAvpComms::SendNetAvpINSelect($client, $avpIPAddress, $inputSelect);
+}
+
+# ----------------------------------------------------------------------------
+sub updateSqueezeVol {
+	#used to sync SB vol with AVP
 	my $class = shift;
 	my $client = shift;
 	my $avpVol = shift;
 
-	$log->debug( "*** DenonAvpControl: The Client is: " . $client . "\n");
-	$log->debug( "*** DenonAvpControl: avp vol: " . $avpVol . "\n");
+	$log->debug("*** DenonAvpControl: The Client is: " . $client . "\n");
+	$log->debug("*** DenonAvpControl: avp vol: " . $avpVol . "\n");
 	# change the volume to the SC value from the AVP
 	my $maxVolume = $prefs->client($client)->get('maxVol');	# max volume user wants AVP to be set to
 	$log->debug("*** DenonAvpControl:max volume: $maxVolume \n");

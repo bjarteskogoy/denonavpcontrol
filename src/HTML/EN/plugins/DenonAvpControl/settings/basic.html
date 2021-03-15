@@ -34,6 +34,10 @@
 	               	</select>
 		[% END %]
 
+		[% WRAPPER settingGroup title="PLUGIN_DENONAVPCONTROL_SISELECT" desc="PLUGIN_DENONAVPCONTROL_SISELECT_DESC" %]
+			<ipnut type="text" class="stdedit" name="selectInput" id="selectInput" value="[% prefs.inputSelect %]" size="20" />
+		[% END %]
+
 		[% WRAPPER settingGroup title="PLUGIN_DENONAVPCONTROL_ZONE" desc="PLUGIN_DENONAVPCONTROL_ZONE_DESC" %]
         	       	<select name="[% pw.pref_prefix %]zone">
                 	       	<option value="0" [% IF prefs.zone == "0" %]selected[% END %]>[% "PLUGIN_DENONAVPCONTROL_ZONE1" | string %]</option>
