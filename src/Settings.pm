@@ -185,7 +185,7 @@ sub handler {
 			$prefs->client($client)->set('maxVol', "$maxVol");
 		}
 		$prefs->client($client)->set('quickSelect', "$params->{'quickSelect'}");
-		$prefs->client($client)->set('inputSelect', "$params->{'inputSelect'}");
+		$prefs->client($client)->set('inputSelect', "$params->{'selectInput'}");
 		$prefs->client($client)->set('zone', "$params->{'zone'}");
 	}
 
